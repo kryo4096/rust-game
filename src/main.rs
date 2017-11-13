@@ -6,13 +6,13 @@ use glium::glutin;
 
 use glium::{Display, Surface, VertexBuffer, index, Program, uniforms};
 
-use glutin::{EventsLoop, WindowBuilder, ContextBuilder, Event, WindowEvent, DeviceEvent};
+use glutin::{EventsLoop, WindowBuilder, ContextBuilder, Event, WindowEvent, DeviceEvent, KeyboardInput, ElementState};
 
 use cg::prelude::*;
 
 #[derive(Clone, Copy)]
 struct Vertex {
-    position: [f32;2],
+    position: [f32;3],
 }
 
 implement_vertex!(Vertex, position);
@@ -30,9 +30,15 @@ fn main() {
     let display = Display::new(window, context, &events_loop).unwrap();
 
     let shape = vec! (
-        Vertex { position: [-0.5, -0.5]},
-        Vertex { position: [-0.5, 0.5 ]},
-        Vertex { position: [ 0.5, 0.0 ]},
+        Vertex { position: [-1.0, -1.0, 0.]},
+        Vertex { position: [1.0, -1.0, 0.]},
+        Vertex { position: [ 0.0, 1.0, 0.]},
+        Vertex { position: [3.0, -1.0, 0.]},
+        Vertex { position: [5.0, -1.0, 0.]},
+        Vertex { position: [ 4.0, 1.0, 0.]},
+        Vertex { position: [-8.0, -1.0, 0.]},
+        Vertex { position: [-6.0, -1.0, 0.]},
+        Vertex { position: [ -7.0, 1.0, 0.]},
     );
 
     let vertex_buffer = VertexBuffer::new(&display, &shape).unwrap();
@@ -43,7 +49,7 @@ fn main() {
         &display,
         include_str!("shader/default.vert"),
         include_str!("shader/default.frag"),
-        None,
+        None, 
     ).unwrap();
 
     let mut close = false;
@@ -53,26 +59,41 @@ fn main() {
     let mut angle_x = 0f32;
     let mut angle_y = 0f32;
 
-    let mut position = cg::Vector3::new(2.0, 2.0, 2.0f32);
+    let mut dx = 0f32;
+    let mut dz = 0f32;
+
+    let persp = cg::PerspectiveFov{
+        fovy: cg::Rad(3.14/3f32),
+        aspect: 16.0/9.0f32,
+        near: 0.1f32,
+        far: 100.0,
+    };
+
+    let persp = cg::Matrix4::from(persp);
+
+    let mut position = cg::Vector3::new(0., 0.5, 1.);
 
     while !close {
 
-        t += 0.02;
+        let rot_x = cg::Matrix4::from_angle_x(cg::Deg(-angle_y));
+        let rot_y = cg::Matrix4::from_angle_y(cg::Deg(-angle_x));
 
-        t %= 3.141*2.0;
+        let rot_matrix = rot_x * rot_y;
 
+        position += cg::Matrix4::from_angle_y(cg::Deg(angle_x)).transform_vector(cg::Vector3::new(dx,0.0,dz) / 100.);
 
-        //let tran = cg::Matrix4::from_translation(position);
-        let rot_x = cg::Matrix4::from_angle_x(cg::Deg(angle_y));
-        let rot_y = cg::Matrix4::from_angle_y(cg::Deg(angle_x));
+        let trans = cg::Matrix4::from_translation(-position);
 
-        let matrix = rot_y * rot_x;
+        let matrix = persp * rot_matrix * trans;
 
-        let matrix : [[f32;4];4] = matrix.inverse_transform().unwrap().into();
+        let matrix : [[f32;4];4] = matrix.into();
 
         let uniforms = uniform! (
             matrix: matrix
         );
+
+
+
 
         let mut target = display.draw();
 
@@ -98,12 +119,41 @@ fn main() {
 
                         let dims = window.get_inner_size().unwrap();
 
-                        angle_x += (position.0 - dims.0 as f64 / 2.0) as f32;
-                        angle_y -= (position.1 - dims.1 as f64 / 2.0) as f32;
+                        angle_x -= (position.0 - dims.0 as f64 / 2.0) as f32 / 20.;
+                        angle_y -= (position.1 - dims.1 as f64 / 2.0) as f32 / 20.;
+
+                        angle_y = angle_y.min(90.);
+                        angle_y = angle_y.max(-90.);
 
                         window.set_cursor_position(dims.0 as i32 / 2, dims.1 as i32 / 2);
+                    },
+                    WindowEvent::KeyboardInput {input, ..} => {
 
-                        ()
+                        let state = input.state;
+                        let scancode = input.scancode;
+
+                        match state {
+                            ElementState::Released => {
+                                match scancode {
+                                        17 => dz = 0.,
+                                        31 => dz = 0.,
+                                        30 => dx = 0.,
+                                        32 => dx = 0.,
+                                        _ => (),
+                                    }
+                            },
+                            ElementState::Pressed =>     match scancode {
+                                    17 => dz = -1.,
+                                    31 => dz = 1.,
+                                    30 => dx = -1.,
+                                    32 => dx = 1.,
+                                    _ => (),
+                                }
+                        };
+
+
+
+                        println!("{}", scancode);
 
                     },
                     _ => (),
