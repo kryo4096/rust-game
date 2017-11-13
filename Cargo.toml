@@ -1,0 +1,6 @@
+[package]
+name = "rust-game"
+version = "0.1.0"
+authors = ["kryo4096 <kryo4096@gmail.com>"]
+
+[dependencies]
