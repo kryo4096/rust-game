@@ -6,3 +6,4 @@ authors = ["kryo4096 <kryo4096@gmail.com>"]
 [dependencies]
 glium = "*"
 cgmath = "*"
+noise = "*"
