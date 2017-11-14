@@ -2,51 +2,23 @@
 extern crate glium;
 extern crate noise;
 
-mod math;
-mod mesh;
-mod generator;
-
 use glium::glutin;
-
 use glium::{Display, Surface, VertexBuffer, IndexBuffer, index, Program, uniforms};
-
 use glutin::{EventsLoop, WindowBuilder, ContextBuilder, Event, WindowEvent, DeviceEvent, KeyboardInput, ElementState};
 
+mod math;
+mod mesh;
+mod input;
+mod generator;
+mod camera;
+mod timer;
+
 use math::*;
-
 use mesh::*;
-
+use input::*;
 use generator::*;
-
-/// Computes the View Matrix for a first person shooter-type camera
-struct FirstPersonCamera {
-    pub angle_x: f32,
-    pub angle_y: f32,
-    pub position: Vec3,
-}
-
-impl FirstPersonCamera {
-    pub fn new(position: Vec3) -> Self {
-        FirstPersonCamera{ angle_x: 0., angle_y: 0. , position}
-    }
-
-    pub fn get_matrix(&self) -> Mat4 {
-        let rotation_x = Mat4::from_angle_x(Deg(-self.angle_y));
-        let rotation_y = Mat4::from_angle_y(Deg(-self.angle_x));
-
-        let translation = Mat4::from_translation(-self.position);
-
-        rotation_x * rotation_y * translation
-    }
-
-    pub fn walk (&mut self, amount: Vec3){
-
-        let rotation = Mat4::from_angle_y(Deg(self.angle_x));
-
-        self.position += rotation.transform_vector(amount);
-
-    }
-}
+use camera::*;
+use timer::*;
 
 fn main() {
     let mut events_loop = EventsLoop::new();
@@ -60,13 +32,13 @@ fn main() {
 
     let display = Display::new(window, context, &events_loop).unwrap();
 
-    let mut mesh = generate_plane(256, 256, 1.0);
+    let hmg = HeightMapGen::new();
 
+    let chunk = Chunk::generate(0, 0, hmg.generate_heightmap(0,0));
 
-    let vertex_buffer = mesh.vertex_buffer(&display);
+    let vertex_buffer = chunk.mesh().vertex_buffer(&display);
 
-
-    let indices = mesh.index_buffer(&display);
+    let indices = chunk.mesh().index_buffer(&display);
 
     let program = Program::from_source(
         &display,
@@ -77,15 +49,17 @@ fn main() {
 
     let mut close = false;
 
-    let mut dx = 0f32;
-    let mut dz = 0f32;
-
     let perspective = Mat4::from(Perspective {
         fovy: Rad(3.14/3.),
         aspect: 16./9.,
         near: 0.1,
         far: 1000.,
     });
+
+    let mut input_manager = InputManager::new();
+    input_manager.register_axis("x", 30, 32, 2.);
+    input_manager.register_axis("y", 42, 57, 2.);
+    input_manager.register_axis("z", 17, 31, 2.);
 
     let mut camera = FirstPersonCamera::new(Vec3::new(0.,0.1,0.));
 
@@ -98,30 +72,11 @@ fn main() {
     .. Default::default()
     };
 
+    let mut delta : f32 = 0.;
+
+    let mut timer = Timer::start();
 
     while !close {
-
-        camera.walk(Vec3::new(dx,0.,dz)/10.);
-
-        let matrix : [[f32;4];4] =  (perspective * camera.get_matrix()).into();
-
-        let uniforms = uniform! (
-            vp: matrix
-        );
-
-        let mut target = display.draw();
-
-        target.clear_color_and_depth((0.1,0.5,1.0,1.0), 1.0);
-
-        target.draw(
-            &vertex_buffer,
-            &indices,
-            &program,
-            &uniforms,
-            &params,
-        ).unwrap();
-
-        target.finish().unwrap();
 
         events_loop.poll_events(|ev| {
             match ev {
@@ -146,29 +101,10 @@ fn main() {
                         let state = input.state;
                         let scancode = input.scancode;
 
-                        match state {
-                            ElementState::Released => {
-                                match scancode {
-                                        17 => dz = 0.,
-                                        31 => dz = 0.,
-                                        30 => dx = 0.,
-                                        32 => dx = 0.,
-                                        _ => (),
-                                    }
-                            },
-                            ElementState::Pressed =>
-                                match scancode {
-                                    17 => dz = -1.,
-                                    31 => dz = 1.,
-                                    30 => dx = -1.,
-                                    32 => dx = 1.,
-                                    _ => (),
-                                }
+                        match state { 
+                            ElementState::Released => input_manager.release(scancode),
+                            ElementState::Pressed => input_manager.press(scancode),
                         };
-
-
-
-                        println!("{}", scancode);
 
                     },
                     _ => (),
@@ -177,6 +113,37 @@ fn main() {
             };
         });
 
+        let mut dx = input_manager.axis("x");
+        let mut dy = input_manager.axis("y");
+        let mut dz = input_manager.axis("z");
+
+        camera.walk(Vec3::new(dx,dy,dz) * timer.delta() * 100.);
+
+        let model_matrix : [[f32;4];4] = chunk.model_m().into();
+
+        let view_projection_matrix : [[f32;4];4] =  (perspective * camera.get_matrix()).into();
+
+        let uniforms = uniform! (
+            model_m: model_matrix,
+            view_projection_m: view_projection_matrix
+        );
+
+        let mut target = display.draw();
+
+        target.clear_color_and_depth((0.1,0.5,1.0,1.0), 1.0);
+
+        target.draw(
+            &vertex_buffer,
+            &indices,
+            &program,
+            &uniforms,
+            &params,
+        ).unwrap();
+
+        target.finish().unwrap();
+
+        timer.update();
+        input_manager.update(timer.delta());
     }
 
 }

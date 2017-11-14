@@ -2,18 +2,20 @@
 
 in vec3 position;
 
-out vec3 pos;
+out vec3 world_pos;
 
-out float z;
+out vec3 view_pos;
 
-uniform mat4 vp;
+uniform mat4 model_m;
+uniform mat4 view_projection_m;
+
 
 void main() {
 
-  gl_Position = vp * vec4(position, 1.0);
+  gl_Position = view_projection_m * model_m * vec4(position, 1.0);
 
-  z = gl_Position.z;
+  world_pos = (model_m * vec4(position, 1.0)).xyz;
 
-  pos = position;
+  view_pos = gl_Position.xyz;
 
 }

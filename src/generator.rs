@@ -1,32 +1,99 @@
 use mesh::*;
 use noise::*;
+use math::*;
 
-pub fn generate_plane(width: u32, depth: u32, scale: f32) -> Mesh{
+pub const CHUNK_SIZE : u32 = 256;
 
-    let mut mesh = Mesh::empty();
+pub type HeightMap = [[f32; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
 
-    let noise = Fbm::new();
+pub struct Chunk {
+    chunk_x: i32,
+    chunk_z: i32,
+    heightmap: HeightMap,
+    mesh: Mesh,
+}
 
-    for x in 0..width {
-        for z in 0..depth {
-            let xf = x as f32;
-            let zf = z as f32;
+impl Chunk {
 
-            mesh.push_vertex(Vertex{position:[xf * scale, noise.get([xf / 100. / scale, zf / 100. / scale]).max(0.) * 100., zf * scale]});
+    pub fn generate(chunk_x: i32, chunk_z: i32, heightmap: HeightMap) -> Self {
 
-            if x < width -1 && z < depth - 1 {
+        let mut chunk = Self {chunk_x, chunk_z, heightmap, mesh: Mesh::empty()};
+        chunk.build_mesh();
+        chunk
 
-                let q = z * width + x;
+    }
 
-                mesh.push_index(q);
-                mesh.push_index(q+width);
-                mesh.push_index(q+width+1);
-                mesh.push_index(q);
-                mesh.push_index(q+1);
-                mesh.push_index(q+width+1);
+    fn build_mesh(&mut self) {
+
+        self.mesh = Mesh::empty();
+
+        for x in 0..CHUNK_SIZE {
+            for z in 0..CHUNK_SIZE {
+                self.mesh.push_vertex( Vertex{
+                    position: [
+                        x as f32,
+                        self.heightmap[x as usize][z as usize],
+                        z as f32
+                    ],
+                    normal: [0.0,0.0,0.0],
+                });
+
+                if x < CHUNK_SIZE -1 && z < CHUNK_SIZE - 1 {
+
+                    let q = z * CHUNK_SIZE + x;
+
+                    self.mesh.push_index(q);
+                    self.mesh.push_index(q+CHUNK_SIZE);
+                    self.mesh.push_index(q+CHUNK_SIZE+1);
+                    self.mesh.push_index(q);
+                    self.mesh.push_index(q+1);
+                    self.mesh.push_index(q+CHUNK_SIZE+1);
+                }
             }
         }
     }
 
-    mesh
+    pub fn mesh(&self) -> &Mesh {
+        &self.mesh
+    }
+
+    pub fn model_m(&self) -> Mat4{
+        Mat4::from_translation(Vec3::new(self.chunk_x as f32 * CHUNK_SIZE as f32, 0., self.chunk_z as f32 * CHUNK_SIZE as f32 ))
+    }
+
+}
+
+pub struct HeightMapGen {
+    noise  : Fbm<f32>,
+}
+
+impl HeightMapGen {
+
+    pub fn new() -> Self{
+
+        let noise = Fbm::new();
+
+        let noise = noise.set_frequency(0.01);
+
+        Self {noise}
+
+    }
+
+    pub fn generate_heightmap(&self, chunk_x: i32, chunk_z: i32) -> HeightMap {
+
+        let mut heightmap = [[0.;CHUNK_SIZE as usize];CHUNK_SIZE as usize];
+
+        for x in 0..CHUNK_SIZE as usize {
+            for z in 0..CHUNK_SIZE as usize {
+                let probe_x = chunk_x as f32 * CHUNK_SIZE as f32 + x as f32;
+                let probe_z = chunk_z as f32 * CHUNK_SIZE as f32 + z as f32;
+
+                heightmap[x][z] = self.noise.get([probe_x, probe_z]).max(0.0)*100.;
+            }
+        }
+
+        heightmap
+
+    }
+
 }
