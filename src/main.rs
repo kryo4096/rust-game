@@ -24,7 +24,7 @@ fn main() {
     let mut events_loop = EventsLoop::new();
 
     let window = WindowBuilder::new()
-        .with_dimensions(1280, 720)
+        .with_dimensions(1600, 900)
         .with_title("Advanced Game");
 
     let context = ContextBuilder::new()
@@ -32,9 +32,9 @@ fn main() {
 
     let display = Display::new(window, context, &events_loop).unwrap();
 
-    let hmg = HeightMapGen::new();
+    let noise = TerrainNoise::new();
 
-    let chunk = Chunk::generate(0, 0, hmg.generate_heightmap(0,0));
+    let chunk = Chunk::generate(0, 0, noise);
 
     let vertex_buffer = chunk.mesh().vertex_buffer(&display);
 
@@ -130,6 +130,7 @@ fn main() {
             view_m: view_matrix,
             projection_m: projection_matrix,
             fog_color:  [0.1f32,0.5,1.0,1.0],
+            light: [1.0f32,-1.0,1.0],
         );
 
         let mut target = display.draw();

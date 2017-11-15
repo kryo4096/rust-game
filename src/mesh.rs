@@ -6,7 +6,7 @@ pub struct Vertex {
     pub normal: [f32;3],
 }
 
-implement_vertex!(Vertex, position);
+implement_vertex!(Vertex, position, normal);
 
 pub struct Mesh {
     vertices: Vec<Vertex>,
@@ -33,11 +33,6 @@ impl Mesh {
 
     pub fn push_index(&mut self, i: u32) {
         self.indices.push(i);
-    }
-
-    pub fn calculate_normals(&mut self) {
-
-
     }
 
 }

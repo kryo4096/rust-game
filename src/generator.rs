@@ -4,20 +4,18 @@ use math::*;
 
 pub const CHUNK_SIZE : u32 = 256;
 
-pub type HeightMap = [[f32; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
-
 pub struct Chunk {
     chunk_x: i32,
     chunk_z: i32,
-    heightmap: HeightMap,
     mesh: Mesh,
+    noise: TerrainNoise,
 }
 
 impl Chunk {
 
-    pub fn generate(chunk_x: i32, chunk_z: i32, heightmap: HeightMap) -> Self {
+    pub fn generate(chunk_x: i32, chunk_z: i32, noise: TerrainNoise) -> Self {
 
-        let mut chunk = Self {chunk_x, chunk_z, heightmap, mesh: Mesh::empty()};
+        let mut chunk = Self {chunk_x, chunk_z, noise, mesh: Mesh::empty()};
         chunk.build_mesh();
         chunk
 
@@ -29,13 +27,31 @@ impl Chunk {
 
         for x in 0..CHUNK_SIZE {
             for z in 0..CHUNK_SIZE {
+
+                let normal;
+                let this;
+
+                {
+                    let x = x as i32;
+                    let z = z as i32;
+
+                    this = self.noise.get(x,z);
+                    let left = self.noise.get(x-1,z);
+                    let right = self.noise.get(x+1,z);
+                    let front = self.noise.get(x,z -1);
+                    let back = self.noise.get(x, z + 1);
+
+                    normal = Vec3::new(left-right,2.,front-back).normalize();
+
+                }
+
                 self.mesh.push_vertex( Vertex{
                     position: [
                         x as f32,
-                        self.heightmap[x as usize][z as usize],
+                        this,
                         z as f32
                     ],
-                    normal: [0.0,0.0,0.0],
+                    normal: normal.into(),
                 });
 
                 if x < CHUNK_SIZE -1 && z < CHUNK_SIZE - 1 {
@@ -45,8 +61,8 @@ impl Chunk {
                     self.mesh.push_index(q);
                     self.mesh.push_index(q+CHUNK_SIZE);
                     self.mesh.push_index(q+CHUNK_SIZE+1);
-                    self.mesh.push_index(q);
                     self.mesh.push_index(q+1);
+                    self.mesh.push_index(q);
                     self.mesh.push_index(q+CHUNK_SIZE+1);
                 }
             }
@@ -63,11 +79,11 @@ impl Chunk {
 
 }
 
-pub struct HeightMapGen {
+pub struct TerrainNoise {
     noise  : Fbm<f32>,
 }
 
-impl HeightMapGen {
+impl TerrainNoise {
 
     pub fn new() -> Self{
 
@@ -79,20 +95,9 @@ impl HeightMapGen {
 
     }
 
-    pub fn generate_heightmap(&self, chunk_x: i32, chunk_z: i32) -> HeightMap {
+    pub fn get(&self, x: i32, z: i32) -> f32 {
 
-        let mut heightmap = [[0.;CHUNK_SIZE as usize];CHUNK_SIZE as usize];
-
-        for x in 0..CHUNK_SIZE as usize {
-            for z in 0..CHUNK_SIZE as usize {
-                let probe_x = chunk_x as f32 * CHUNK_SIZE as f32 + x as f32;
-                let probe_z = chunk_z as f32 * CHUNK_SIZE as f32 + z as f32;
-
-                heightmap[x][z] = self.noise.get([probe_x, probe_z]).max(0.0)*100.;
-            }
-        }
-
-        heightmap
+        self.noise.get([x as f32, z as f32]).max(0.0)*100.
 
     }
 

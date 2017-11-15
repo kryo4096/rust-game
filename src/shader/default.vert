@@ -1,14 +1,20 @@
 #version 140
 
 in vec3 position;
-
-out vec3 world_pos;
-
-out vec3 view_pos;
+in vec3 normal;
 
 uniform mat4 model_m;
 uniform mat4 view_m;
 uniform mat4 projection_m;
+uniform vec3 light;
+
+out vec3 world_pos;
+out vec3 view_pos;
+
+out vec3 o_normal;
+
+flat out float brightness;
+
 
 
 void main() {
@@ -22,5 +28,9 @@ void main() {
   world_pos = world.xyz;
 
   view_pos = view.xyz;
+
+  brightness = clamp(dot(normal,-light),0.6,1.0);
+
+  o_normal = normal;
 
 }
