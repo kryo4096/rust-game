@@ -101,7 +101,7 @@ fn main() {
                         let state = input.state;
                         let scancode = input.scancode;
 
-                        match state { 
+                        match state {
                             ElementState::Released => input_manager.release(scancode),
                             ElementState::Pressed => input_manager.press(scancode),
                         };
@@ -121,11 +121,15 @@ fn main() {
 
         let model_matrix : [[f32;4];4] = chunk.model_m().into();
 
-        let view_projection_matrix : [[f32;4];4] =  (perspective * camera.get_matrix()).into();
+        let view_matrix : [[f32;4];4] =  camera.get_matrix().into();
+
+        let projection_matrix : [[f32;4];4] = perspective.into();
 
         let uniforms = uniform! (
             model_m: model_matrix,
-            view_projection_m: view_projection_matrix
+            view_m: view_matrix,
+            projection_m: projection_matrix,
+            fog_color:  [0.1f32,0.5,1.0,1.0],
         );
 
         let mut target = display.draw();
