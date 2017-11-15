@@ -1,6 +1,9 @@
 #[macro_use]
 extern crate glium;
 extern crate noise;
+extern crate specs;
+#[macro_use]
+extern crate specs_derive;
 
 use glium::glutin;
 use glium::{Display, Surface, VertexBuffer, IndexBuffer, index, Program, uniforms};
@@ -12,6 +15,7 @@ mod input;
 mod generator;
 mod camera;
 mod timer;
+mod components;
 
 use math::*;
 use mesh::*;
@@ -19,6 +23,7 @@ use input::*;
 use generator::*;
 use camera::*;
 use timer::*;
+use components::*;
 
 fn main() {
     let mut events_loop = EventsLoop::new();

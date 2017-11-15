@@ -7,3 +7,5 @@ authors = ["kryo4096 <kryo4096@gmail.com>"]
 glium = "*"
 cgmath = "*"
 noise = "*"
+specs = "*"
+specs-derive = "*"

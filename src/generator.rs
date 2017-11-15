@@ -2,7 +2,7 @@ use mesh::*;
 use noise::*;
 use math::*;
 
-pub const CHUNK_SIZE : u32 = 256;
+pub const CHUNK_SIZE : u32 = 128;
 
 pub struct Chunk {
     chunk_x: i32,
@@ -61,8 +61,8 @@ impl Chunk {
                     self.mesh.push_index(q);
                     self.mesh.push_index(q+CHUNK_SIZE);
                     self.mesh.push_index(q+CHUNK_SIZE+1);
-                    self.mesh.push_index(q+1);
                     self.mesh.push_index(q);
+                    self.mesh.push_index(q+1);
                     self.mesh.push_index(q+CHUNK_SIZE+1);
                 }
             }
@@ -97,7 +97,7 @@ impl TerrainNoise {
 
     pub fn get(&self, x: i32, z: i32) -> f32 {
 
-        self.noise.get([x as f32, z as f32]).max(0.0)*100.
+        ((self.noise.get([x as f32, z as f32])*2.).tanh()+1.)/2.*60.
 
     }
 

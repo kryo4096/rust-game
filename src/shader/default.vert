@@ -8,14 +8,21 @@ uniform mat4 view_m;
 uniform mat4 projection_m;
 uniform vec3 light;
 
-out vec3 world_pos;
 out vec3 view_pos;
 
-out vec3 o_normal;
+flat out vec4 face_color;
 
-flat out float brightness;
+vec4 position_to_color(vec3 pos) {
+  vec4 color;
 
+  if(dot(normal , vec3(0.0,1.0,0.0)) > 0.6) {
+    color = vec4(0.2+0.1*sin(pos.y)*cos(pos.x)*sin(pos.z),1.0,0.0,1.0);
+  } else {
+    color = vec4(0.2,0.2,0.2,1.0) * max(pos.y / 50.0,0.3);
+  }
 
+  return color;
+}
 
 void main() {
 
@@ -23,14 +30,11 @@ void main() {
 
   vec4 view = view_m * world;
 
-  gl_Position = projection_m * view;
-
-  world_pos = world.xyz;
-
   view_pos = view.xyz;
 
-  brightness = clamp(dot(normal,-light),0.6,1.0);
+  float brightness = clamp(dot(normal,-light),0.4,1.0);
 
-  o_normal = normal;
+  face_color = position_to_color(world.xyz) * brightness;
+  gl_Position = projection_m * view;
 
 }
